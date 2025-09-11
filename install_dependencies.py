@@ -66,6 +66,10 @@ def install_other_dependencies():
         "streamlit-extras>=0.3.6",
         "beautifulsoup4>=4.12.0",
         "lxml>=4.9.0"
+    
+"pandas-ta>=0.3.14b0"
+"transformers>=4.41.0"
+"scikit-learn>=1.2.0"
     ]
     
     failed_packages = []
@@ -208,4 +212,5 @@ def main():
     print("4. Open http://localhost:8501 in your browser")
 
 if __name__ == "__main__":
+
     main() 
