@@ -236,6 +236,15 @@ def test_openai_simple():
         if "invalid" in msg.lower() or "api key" in msg.lower():
             return (False, "Key Invalid")
         return (False, msg[:80] + ("..." if len(msg) > 80 else ""))
+        
+def predict_price_lstm(_self, hist_df, steps=5, lookback: int = 20, epochs: int = 10):
+        if tf is None or Sequential is None or LSTM is None or Dense is None:
+            return None, "TensorFlow/Keras not available"
+        try:
+            preds = lstm_residual_only_forecast(hist_df, steps=steps, lookback=int(lookback or 20), epochs=int(epochs or 10))
+            return preds.values.tolist() if hasattr(preds, 'values') else list(preds), None
+        except Exception as e:
+            return None, str(e)
 
 
 class MarketInsightsDashboard:
@@ -301,6 +310,28 @@ class MarketInsightsDashboard:
             return None, str(e)
 
     @st.cache_data(ttl=1800)
+    def detect_trend_patterns_prophet(_self, hist_df):
+        if Prophet is None:
+            return None, "Prophet not available"
+        try:
+            df = hist_df.reset_index()[['Date','Close']].rename(columns={'Date':'ds','Close':'y'})
+            # Ensure ds column is timezone-naive
+            if isinstance(df['ds'].dtype, pd.DatetimeTZDtype):
+                df['ds'] = df['ds'].dt.tz_localize(None)
+            else:
+                df['ds'] = pd.to_datetime(df['ds'])
+                if hasattr(df['ds'], 'dt') and df['ds'].dt.tz is not None:
+                    df['ds'] = df['ds'].dt.tz_localize(None)
+            m = Prophet()
+            m.fit(df)
+            future = m.make_future_dataframe(periods=7)
+            forecast = m.predict(future)
+            return forecast, None
+        except Exception as e:
+            return None, str(e)
+
+
+    @st.cache_data(ttl=1800)
     def predict_price_lstm(self, hist_df, steps=5, lookback: int = 20, epochs: int = 10):
         if tf is None:
             return None, "TensorFlow/Keras not available"
@@ -360,6 +391,28 @@ class MarketInsightsDashboard:
             reco = "Neutral"
         return score, reco, details
 
+    def ask_ai_unified(self, prompt: str, max_tokens: int = 150) -> tuple:
+        order = self._ai_order()
+        last_err = None
+        for prov in order:
+            if prov == 'gemini' and GOOGLE_GEMINI_API_KEY and gemini_model is not None and genai is not None:
+                try:
+                    resp = gemini_model.generate_content(prompt)
+                    return ('Gemini', getattr(resp, 'text', ''))
+                except Exception as e:
+                    last_err = f"Gemini: {str(e)[:120]}"
+                    continue
+            if prov == 'openai' and OPENAI_API_KEY and (openai_client is not None or legacy_openai) and openai is not None:
+                try:
+                    txt = ask_openai(prompt, max_tokens=max_tokens)
+                    return ('OpenAI', txt)
+                except Exception as e:
+                    last_err = f"OpenAI: {str(e)[:120]}"
+                    continue
+        if not order:
+            return (None, "AI not available - configure OpenAI or Gemini in .env, or adjust AI Options.")
+        return (None, f"All AI providers failed. Last error: {last_err or 'Unknown'}")
+        
     # --- Pattern Detection with Prophet ---
     @st.cache_data(ttl=1800)
     def detect_trend_patterns_prophet(self, hist_df):
@@ -2357,4 +2410,5 @@ def render_market_ripple_engine(symbol: str):
 
 if __name__ == "__main__":
     main()
+
 
