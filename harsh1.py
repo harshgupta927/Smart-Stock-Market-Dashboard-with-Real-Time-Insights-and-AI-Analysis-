@@ -154,7 +154,7 @@ def sanitize_df_for_streamlit(df: pd.DataFrame) -> pd.DataFrame:
 # Initialize sentiment analyzer
 sentiment_analyzer = SentimentIntensityAnalyzer()
 
-# API Keys
+# API Keys 
 ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
 NEWS_API_KEY = os.getenv('NEWS_API_KEY')
 YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
@@ -168,7 +168,7 @@ gemini_model = None
 
 if OPENAI_API_KEY and openai is not None:
     try:
-        # Try new OpenAI SDK (v1+)
+        # Try a new OpenAI SDK (v1+)
         try:
             from openai import OpenAI as _OpenAI  # type: ignore
             openai_client = _OpenAI(api_key=OPENAI_API_KEY)
@@ -2357,3 +2357,4 @@ def render_market_ripple_engine(symbol: str):
 
 if __name__ == "__main__":
     main()
+
